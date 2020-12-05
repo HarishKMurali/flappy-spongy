@@ -9,10 +9,10 @@ def floor_pos():
 		if game_running:
 			floor_x_pos-=1
 			bg_x_pos-=1
-			if bg_x_pos<=-576:
-				bg_x_pos=0
-			if floor_x_pos<=-576:
-				floor_x_pos=0
+			if bg_x_pos<=-1828:
+				bg_x_pos=-626
+			if floor_x_pos<=-1242:
+				floor_x_pos=-333
 		if stop_threads:
 			break
 		sleep(delay)
@@ -39,7 +39,7 @@ def create_obstacles():
 def spongebob_animation():
 	global spongebob_surface,spongebob_rect,spongebob_index
 	while True:
-		if spongebob_index<2:
+		if spongebob_index<3:
 			spongebob_index+=1
 		else:
 			spongebob_index=0
@@ -47,15 +47,15 @@ def spongebob_animation():
 		spongebob_rect=spongebob_surface.get_rect(center=(100,spongebob_rect.centery))
 		if stop_threads:
 			break
-		sleep(0.2)
+		sleep(0.15)
 
 def draw_background():
 	screen.blit(bg_surface,(bg_x_pos,0))
-	screen.blit(bg_surface,(bg_x_pos+576,0))
+	screen.blit(bg_surface,(bg_x_pos+1202,0))
 
 def draw_floor():
-	screen.blit(floor_surface,(floor_x_pos,900))
-	screen.blit(floor_surface,(floor_x_pos+576,900))
+	screen.blit(floor_surface,(floor_x_pos,550))
+	screen.blit(floor_surface,(floor_x_pos+909,550))
 
 def move_obstacles(obstacles):
 	for obstacle in obstacles:
@@ -72,7 +72,7 @@ def draw_obstacles(obstacles):
 
 def check_collison(obstacles):
 	for obstacle in obstacles:
-		if spongebob_rect.colliderect(obstacle):
+		if obstacle.colliderect(spongebob_rect.inflate(-40,-40)):
 			return False
 	if spongebob_rect.top<=-100 or spongebob_rect.bottom>=900:
 		return False
@@ -81,31 +81,28 @@ def check_collison(obstacles):
 def rotate_spongebob(spongebob):
 	return pygame.transform.rotozoom(spongebob,-3*spongebob_movement,1)
 
+def display_text(display_text,rectangle_center,font_size=''):
+
+	text_color=(13, 59, 76)
+	if font_size == 'big':
+		text_surface = score_font.render(display_text,True,text_color)
+	else:
+		text_surface = game_font.render(display_text,True,text_color)
+
+	text_rect = text_surface.get_rect(center=rectangle_center)
+	screen.blit(text_surface,text_rect)
+
 def score_display(state,time=''):
 
 	if state == 'game_mode':
+		display_text(str(score),(288,100),"big")
+		display_text(str(round(game_time,3)),(510,30))
 
-		score_surface = score_font.render(str(score),True,(255,255,255))
-		score_rect = score_surface.get_rect(center = (288,100))
-		screen.blit(score_surface,score_rect)
-		
-		time_surface = game_font.render(str(round(game_time,3)),True,(255,255,255))
-		time_rect = time_surface.get_rect(top=20,right=556)
-		screen.blit(time_surface,time_rect)
+	elif state == 'game_over':
+		display_text(f'Score: {int(score)}',(288,100))
+		display_text(f'High score: {int(high_score)}',(288,850))
+		display_text(time,(288,475))
 
-	if state == 'game_over':
-
-		score_surface = game_font.render(f'Score: {int(score)}' ,True,(255,255,255))
-		score_rect = score_surface.get_rect(center = (288,100))
-		screen.blit(score_surface,score_rect)
-
-		high_score_surface = game_font.render(f'High score: {int(high_score)}',True,(255,255,255))
-		high_score_rect = high_score_surface.get_rect(center = (288,850))
-		screen.blit(high_score_surface,high_score_rect)
-		
-		time_surface = game_font.render(time,True,(255,255,255))
-		time_rect = time_surface.get_rect(center=(288,475))
-		screen.blit(time_surface,time_rect)
 
 def obstacle_score_check():
 	global score, can_score 
@@ -117,43 +114,58 @@ def obstacle_score_check():
 			if obstacle.centerx < 0:
 				can_score = True
 
+def update_highscore():
+	f=open("data.py","r")
+	lines=f.readlines()
+	f.close()
+	for i in range(len(lines)):
+		if lines[i].startswith("high_score="):
+			lines[i]="high_score=%d\t\t\t\t# high score\n"%(high_score)
+			break
+	f=open("data.py","w")
+	f.writelines(lines)
+	f.close()
+
 def quit_game():
 	global stop_threads
 	stop_threads=True
 	for thread in thread_list:
 		thread.join()
+	update_highscore()
 	pygame.quit()
 	sys.exit()
 
 pygame.init()
+pygame.display.set_caption('FlaPpY sPoNgy')
 screen=pygame.display.set_mode((576,1024))
 clock=pygame.time.Clock()
 
+spongebob_movement=0        
 floor_x_pos=0
 bg_x_pos=0
 game_time=0
 score=0
 game_running=False
 can_score=True
+delay=1/frame_rate
 
 game_font=pygame.font.Font(font_file,font_size)
 score_font=pygame.font.Font(font_file,score_font_size)
 
 bg_surface=pygame.transform.scale2x(pygame.image.load(bg_image).convert())
-floor_surface=pygame.transform.scale2x(pygame.image.load(floor_image).convert())
+floor_surface=pygame.image.load(floor_image).convert_alpha()
 
-# spongebob_surface=pygame.transform.scale2x(pygame.image.load(spongebob_mid_image).convert_alpha())
-# spongebob_rect=spongebob_surface.get_rect(center=start_position)
-
-spongebob_down=pygame.transform.scale2x(pygame.image.load(spongebob_down_image).convert_alpha())
-spongebob_mid=pygame.transform.scale2x(pygame.image.load(spongebob_mid_image).convert_alpha())
-spongebob_up=pygame.transform.scale2x(pygame.image.load(spongebob_up_image).convert_alpha())
-spongebob_frames=[spongebob_down,spongebob_mid,spongebob_up]
+spongebob_frames=[]
+spongebob_scale=0.42
+spongebob_frames.append(pygame.transform.rotozoom(pygame.image.load(spongebob_0).convert_alpha(),0,spongebob_scale))
+spongebob_frames.append(pygame.transform.rotozoom(pygame.image.load(spongebob_1).convert_alpha(),0,spongebob_scale))
+spongebob_frames.append(pygame.transform.rotozoom(pygame.image.load(spongebob_2).convert_alpha(),0,spongebob_scale))
+spongebob_frames.append(pygame.transform.rotozoom(pygame.image.load(spongebob_3).convert_alpha(),0,spongebob_scale))
 spongebob_index=1
 spongebob_surface=spongebob_frames[spongebob_index]
 spongebob_rect=spongebob_surface.get_rect(center=start_position)
 
-obstacle_surface=pygame.transform.scale2x(pygame.image.load(obstacle_image).convert())
+obstacle_surface=pygame.image.load(obstacle_image).convert_alpha()
 obstacle_list=[]
 
 stop_threads=False
@@ -225,13 +237,13 @@ while True:
 	draw_background()
 
 	if game_running:
+		game_running=check_collison(obstacle_list)
+		obstacle_list=move_obstacles(obstacle_list)
+		draw_obstacles(obstacle_list)
 		spongebob_movement+=gravity
 		rotated_spongebob=rotate_spongebob(spongebob_surface)
 		spongebob_rect.centery+=spongebob_movement
 		screen.blit(rotated_spongebob,spongebob_rect)
-		game_running=check_collison(obstacle_list)
-		obstacle_list=move_obstacles(obstacle_list)
-		draw_obstacles(obstacle_list)
 		obstacle_score_check()
 		score_display('game_mode')
 	else:
@@ -243,7 +255,7 @@ while True:
 		if(timer_thread.is_alive()):
 			stop_timer=True
 			timer_thread.join()
-		score_display('game_over',"time: "+str(round(game_time,3)))
+		score_display('game_over',"Time: "+str(round(game_time,3)))
 
 	draw_floor()
 
